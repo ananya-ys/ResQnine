@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>ResQnine</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+
+body{
+    background:#0a0a0a;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+    padding:40px;
+}
+
+button{
+    border:none;
+    padding:20px 40px;
+    font-size:20px;
+    color:white;
+    border-radius:10px;
+    cursor:pointer;
+    margin:10px;
+}
+
+.sos{ background:red; }
+.fake{ background:#2ecc71; }
+.sms{ background:#3498db; }
+.whatsapp{ background:#25D366; }
+
+#alertBox{
+    margin-top:30px;
+    padding:20px;
+    border-radius:10px;
+    background:#1f1f1f;
+    display:none;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>ResQnine</h1>
+<p>Voice activated safety system</p>
+
+<button class="sos" onclick="startCountdown()">
+TRIGGER EMERGENCY ALERT
+</button>
+
+<br>
+
+<button class="fake" onclick="fakeCall()">
+FAKE CALL ESCAPE
+</button>
+
+<br>
+
+<button class="sms" onclick="sendSMSLocation()">
+SEND LOCATION (SMS)
+</button>
+
+<br>
+
+<button class="whatsapp" onclick="sendWhatsAppLocation()">
+SEND WHATSAPP ALERT
+</button>
+
+<div id="alertBox"></div>
+
+<div id="countdownBox" style="
+display:none;
+font-size:40px;
+margin-top:20px;
+color:#ff4c4c;
+font-weight:bold;
+"></div>
+
+<div id="map" style="height:400px;margin-top:30px;border-radius:10px;"></div>
+
+<div id="fakeCallScreen" style="
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:black;
+color:white;
+text-align:center;
+padding-top:200px;
+font-size:30px;
+">
+
+📞 Incoming Call
+
+<br><br>
+
+<b>Mom</b>
+
+<br><br>
+
+<button onclick="endFakeCall()" style="background:red;padding:20px;border:none;color:white;border-radius:10px;">
+Decline
+</button>
+
+</div>
+
+<script>
+
+/* ---------- COUNTDOWN ---------- */
+
+function startCountdown(){
+
+const box=document.getElementById("countdownBox")
+
+box.style.display="block"
+
+let count=3
+
+box.innerHTML="🚨 Panic Mode Activating: "+count
+
+const timer=setInterval(()=>{
+
+count--
+
+box.innerHTML="🚨 Panic Mode Activating: "+count
+
+if(count===0){
+
+clearInterval(timer)
+
+box.style.display="none"
+
+panicMode()
+
+}
+
+},1000)
+
+}
+
+/* ---------- MAP ---------- */
+
+function loadMap(lat,lng){
+
+const map=L.map('map').setView([lat,lng],15)
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+attribution:'© OpenStreetMap'
+}).addTo(map)
+
+L.marker([lat,lng]).addTo(map)
+.bindPopup("🚨 Your Location")
+.openPopup()
+
+}
+
+/* ---------- GET LOCATION ---------- */
+
+navigator.geolocation.getCurrentPosition(function(position){
+
+const lat=position.coords.latitude
+const lng=position.coords.longitude
+
+loadMap(lat,lng)
+
+})
+
+/* ---------- SMS ---------- */
+
+function sendSMSLocation(){
+
+navigator.geolocation.getCurrentPosition(function(position){
+
+const lat=position.coords.latitude
+const lng=position.coords.longitude
+
+const mapLink=`https://maps.google.com/?q=${lat},${lng}`
+
+const message=encodeURIComponent(
+"🚨 Emergency! I may be in danger. My location: "+mapLink
+)
+
+window.open(`sms:?body=${message}`)
+
+})
+
+}
+
+
+function startLiveTracking(){
+
+setInterval(()=>{
+
+navigator.geolocation.getCurrentPosition(function(position){
+
+const lat = position.coords.latitude
+const lng = position.coords.longitude
+
+console.log("Updated location:",lat,lng)
+
+/* Update map marker */
+
+loadMap(lat,lng)
+
+})
+
+},10000)
+
+}
+/* ---------- WHATSAPP ---------- */
+
+function sendWhatsAppLocation(){
+
+navigator.geolocation.getCurrentPosition(function(position){
+
+const lat = position.coords.latitude
+const lng = position.coords.longitude
+
+const mapLink = `https://maps.google.com/?q=${lat},${lng}`
+
+const message = encodeURIComponent(
+`🚨 EMERGENCY ALERT
+
+I may be in danger.
+
+My location:
+${mapLink}`
+)
+
+/* MULTIPLE CONTACTS */
+
+const contacts = [
+"918217465810",
+"917392961297",
+"917795731266"
+]
+
+contacts.forEach((phone,index)=>{
+
+setTimeout(()=>{
+window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${message}`,"_blank")
+}, index*3000)
+
+})
+
+})
+
+}
+/* ---------- BACKEND ALERT ---------- */
+
+async function triggerAlert(){
+
+const alertBox=document.getElementById("alertBox")
+
+alertBox.style.display="block"
+alertBox.innerHTML="Sending alert..."
+
+const response=await fetch("http://localhost:8000/api/v1/alert",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+latitude:12.9716,
+longitude:77.5946,
+location_name:"User Location"
+})
+})
+
+const data=await response.json()
+
+alertBox.innerHTML=`
+<h2>🚨 ALERT</h2>
+<p>${data.alert_message}</p>
+<p>Risk Level: ${data.risk_level}</p>
+`
+
+}
+
+/* ---------- FAKE CALL ---------- */
+
+function fakeCall(){
+
+const screen=document.getElementById("fakeCallScreen")
+
+screen.style.display="block"
+
+const audio=new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg")
+
+audio.loop=true
+audio.play()
+
+}
+
+function endFakeCall(){
+
+document.getElementById("fakeCallScreen").style.display="none"
+
+location.reload()
+
+}
+
+/* ---------- PANIC MODE ---------- */
+
+function panicMode(){
+
+console.log("PANIC MODE ACTIVATED")
+
+triggerAlert()
+
+sendSMSLocation()
+
+sendWhatsAppLocation()
+
+}
+
+/* ---------- VOICE TRIGGER ---------- */
+
+const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition
+
+if(SpeechRecognition){
+
+const recognition=new SpeechRecognition()
+
+recognition.continuous=true
+recognition.lang="en-US"
+
+recognition.onresult=function(event){
+
+const transcript=event.results[event.results.length-1][0].transcript.toLowerCase()
+
+console.log("Heard:",transcript)
+
+if(
+transcript.includes("help me") ||
+transcript.includes("help") ||
+transcript.includes("stop")
+){
+
+document.getElementById("alertBox").style.display="block"
+document.getElementById("alertBox").innerHTML="Voice trigger detected..."
+
+startCountdown()
+
+}
+
+}
+
+recognition.start()
+
+}
+
+</script>
+
+</body>
+</html>
