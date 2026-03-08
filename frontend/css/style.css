@@ -1,0 +1,49 @@
+body{
+    margin:0;
+    background:#0a0a0a;
+    font-family:Arial;
+    color:white;
+    text-align:center;
+}
+
+.container{
+    max-width:420px;
+    margin:auto;
+    padding:30px 20px;
+}
+
+h1{
+    font-size:32px;
+    margin-bottom:5px;
+}
+
+.subtitle{
+    color:#aaa;
+    margin-bottom:30px;
+}
+
+button{
+    width:100%;
+    padding:18px;
+    border:none;
+    border-radius:12px;
+    font-size:18px;
+    margin:10px 0;
+    cursor:pointer;
+}
+
+.sos{
+    background:#ff2b2b;
+}
+
+.fake{
+    background:#2ecc71;
+}
+
+.whatsapp{
+    background:#25D366;
+}
+
+button:hover{
+    opacity:0.9;
+}

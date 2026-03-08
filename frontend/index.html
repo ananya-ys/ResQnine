@@ -2,8 +2,11 @@
 <html>
 
 <head>
-<link rel="manifest" href="manifest.json">
+
 <title>ResQnine</title>
+
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -11,61 +14,93 @@
 <style>
 
 body{
+    margin:0;
     background:#0a0a0a;
-    color:white;
     font-family:Arial;
+    color:white;
+}
+
+.container{
+    max-width:420px;
+    margin:auto;
+    padding:40px 20px;
     text-align:center;
-    padding:40px;
+}
+
+h1{
+    font-size:32px;
+    margin-bottom:5px;
+}
+
+.subtitle{
+    color:#aaa;
+    margin-bottom:30px;
 }
 
 button{
+    width:100%;
     border:none;
-    padding:20px 40px;
-    font-size:20px;
+    padding:18px;
+    font-size:18px;
     color:white;
-    border-radius:10px;
+    border-radius:12px;
     cursor:pointer;
-    margin:10px;
+    margin:12px 0;
 }
 
-.sos{ background:red; }
+.sos{ background:#ff2b2b; }
 .fake{ background:#2ecc71; }
 .sms{ background:#3498db; }
 .whatsapp{ background:#25D366; }
 
+button:hover{
+    opacity:0.9;
+}
+
 #alertBox{
-    margin-top:30px;
+    margin-top:20px;
     padding:20px;
     border-radius:10px;
     background:#1f1f1f;
     display:none;
 }
 
+#countdownBox{
+display:none;
+font-size:40px;
+margin-top:20px;
+color:#ff4c4c;
+font-weight:bold;
+}
+
+#map{
+height:400px;
+margin-top:30px;
+border-radius:10px;
+}
+
 </style>
+
 </head>
 
 <body>
 
+<div class="container">
+
 <h1>ResQnine</h1>
-<p>Voice activated safety system</p>
+<p class="subtitle">Voice activated safety system</p>
 
 <button class="sos" onclick="startCountdown()">
 TRIGGER EMERGENCY ALERT
 </button>
 
-<br>
-
 <button class="fake" onclick="fakeCall()">
 FAKE CALL ESCAPE
 </button>
 
-<br>
-
 <button class="sms" onclick="sendSMSLocation()">
 SEND LOCATION (SMS)
 </button>
-
-<br>
 
 <button class="whatsapp" onclick="sendWhatsAppLocation()">
 SEND WHATSAPP ALERT
@@ -73,15 +108,49 @@ SEND WHATSAPP ALERT
 
 <div id="alertBox"></div>
 
-<div id="countdownBox" style="
-display:none;
-font-size:40px;
-margin-top:20px;
-color:#ff4c4c;
-font-weight:bold;
-"></div>
+<div id="countdownBox"></div>
 
-<div id="map" style="height:400px;margin-top:30px;border-radius:10px;"></div>
+<div id="panicScreen" style="
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#ff1a1a;
+color:white;
+text-align:center;
+padding-top:200px;
+font-size:28px;
+z-index:9999;
+">
+
+🚨 EMERGENCY MODE ACTIVE
+
+<br><br>
+
+Sending alerts to guardians...
+
+<br><br>
+
+<button onclick="cancelPanic()" style="
+background:black;
+color:white;
+padding:15px 25px;
+border:none;
+border-radius:10px;
+font-size:18px;
+">
+
+Cancel Alert
+
+</button>
+
+</div>
+
+</div>
+
+<div id="map"></div>
 
 <div id="fakeCallScreen" style="
 display:none;
@@ -193,6 +262,7 @@ window.open(`sms:?body=${message}`)
 
 }
 
+/* ---------- LIVE TRACKING ---------- */
 
 function startLiveTracking(){
 
@@ -205,8 +275,6 @@ const lng = position.coords.longitude
 
 console.log("Updated location:",lat,lng)
 
-/* Update map marker */
-
 loadMap(lat,lng)
 
 })
@@ -214,6 +282,7 @@ loadMap(lat,lng)
 },10000)
 
 }
+
 /* ---------- WHATSAPP ---------- */
 
 function sendWhatsAppLocation(){
@@ -234,12 +303,9 @@ My location:
 ${mapLink}`
 )
 
-/* MULTIPLE CONTACTS */
-
 const contacts = [
 "918217465810",
-"917392961297",
-"917795731266"
+"918809729001"
 ]
 
 contacts.forEach((phone,index)=>{
@@ -253,6 +319,7 @@ window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${message}`,"_bla
 })
 
 }
+
 /* ---------- BACKEND ALERT ---------- */
 
 async function triggerAlert(){
@@ -313,6 +380,8 @@ function panicMode(){
 
 console.log("PANIC MODE ACTIVATED")
 
+document.getElementById("panicScreen").style.display="block"
+
 triggerAlert()
 
 sendSMSLocation()
@@ -320,7 +389,15 @@ sendSMSLocation()
 sendWhatsAppLocation()
 
 }
+function cancelPanic(){
 
+document.getElementById("panicScreen").style.display="none"
+
+document.getElementById("alertBox").style.display="block"
+
+document.getElementById("alertBox").innerHTML="Alert cancelled."
+
+}
 /* ---------- VOICE TRIGGER ---------- */
 
 const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition
@@ -357,12 +434,14 @@ recognition.start()
 
 }
 
-</script>
-<script>
+/* ---------- SERVICE WORKER ---------- */
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js")
   .then(() => console.log("Service Worker Registered"));
 }
+
 </script>
+
 </body>
 </html>
