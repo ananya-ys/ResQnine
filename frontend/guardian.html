@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>ResQnine Guardian Tracker</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+
+body{
+margin:0;
+background:black;
+color:white;
+font-family:Arial;
+text-align:center;
+}
+
+h2{
+margin:15px;
+}
+
+#map{
+height:90vh;
+width:100%;
+}
+
+.status{
+margin-bottom:10px;
+color:#aaa;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>Guardian Live Tracking</h2>
+
+<div class="status">Tracking user's live location</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+const map = L.map('map').setView([12.9716,77.5946],15)
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+attribution:'© OpenStreetMap'
+}).addTo(map)
+
+let marker = L.marker([12.9716,77.5946]).addTo(map)
+
+async function fetchLocation(){
+
+try{
+
+const response = await fetch("http://127.0.0.1:8000/api/v1/location/latest")
+
+const data = await response.json()
+
+if(data.latitude && data.longitude){
+
+marker.setLatLng([data.latitude,data.longitude])
+
+map.setView([data.latitude,data.longitude],15)
+
+}
+
+}catch(err){
+
+console.log("Tracking error",err)
+
+}
+
+}
+
+setInterval(fetchLocation,5000)
+
+</script>
+
+</body>
+
+</html>

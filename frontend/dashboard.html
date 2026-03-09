@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>ResQnine Guardian Dashboard</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+
+body{
+margin:0;
+background:#0a0a0a;
+font-family:Arial;
+color:white;
+text-align:center;
+}
+
+h1{
+margin:20px;
+}
+
+#map{
+height:90vh;
+width:100%;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>🚨 Guardian Live Tracking</h1>
+
+<div id="map"></div>
+
+<script>
+
+let map
+let marker
+
+map=L.map('map').setView([20,78],5)
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+attribution:'© OpenStreetMap'
+}).addTo(map)
+
+async function fetchLocation(){
+
+try{
+
+const res = await fetch("http://127.0.0.1:8000/api/v1/location/latest")
+
+const data = await res.json()
+
+console.log("Location data:", data)
+
+if(!data || data.lat === undefined || data.lng === undefined){
+    return
+}
+
+const lat = parseFloat(data.lat)
+const lng = parseFloat(data.lng)
+
+if(!marker){
+
+marker = L.marker([lat,lng]).addTo(map)
+map.setView([lat,lng],15)
+
+}else{
+
+marker.setLatLng([lat,lng])
+map.panTo([lat,lng])
+
+}
+
+}catch(err){
+
+console.log("location fetch error",err)
+
+}
+
+}
+
+</script>
+
+</body>
+</html>

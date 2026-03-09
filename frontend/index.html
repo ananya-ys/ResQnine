@@ -14,38 +14,38 @@
 <style>
 
 body{
-    margin:0;
-    background:#0a0a0a;
-    font-family:Arial;
-    color:white;
+margin:0;
+background:#0a0a0a;
+font-family:Arial;
+color:white;
 }
 
 .container{
-    max-width:420px;
-    margin:auto;
-    padding:40px 20px;
-    text-align:center;
+max-width:420px;
+margin:auto;
+padding:40px 20px;
+text-align:center;
 }
 
 h1{
-    font-size:32px;
-    margin-bottom:5px;
+font-size:32px;
+margin-bottom:5px;
 }
 
 .subtitle{
-    color:#aaa;
-    margin-bottom:30px;
+color:#aaa;
+margin-bottom:30px;
 }
 
 button{
-    width:100%;
-    border:none;
-    padding:18px;
-    font-size:18px;
-    color:white;
-    border-radius:12px;
-    cursor:pointer;
-    margin:12px 0;
+width:100%;
+border:none;
+padding:18px;
+font-size:18px;
+color:white;
+border-radius:12px;
+cursor:pointer;
+margin:12px 0;
 }
 
 .sos{ background:#ff2b2b; }
@@ -54,15 +54,15 @@ button{
 .whatsapp{ background:#25D366; }
 
 button:hover{
-    opacity:0.9;
+opacity:0.9;
 }
 
 #alertBox{
-    margin-top:20px;
-    padding:20px;
-    border-radius:10px;
-    background:#1f1f1f;
-    display:none;
+margin-top:20px;
+padding:20px;
+border-radius:10px;
+background:#1f1f1f;
+display:none;
 }
 
 #countdownBox{
@@ -107,7 +107,6 @@ SEND WHATSAPP ALERT
 </button>
 
 <div id="alertBox"></div>
-
 <div id="countdownBox"></div>
 
 <div id="panicScreen" style="
@@ -182,6 +181,62 @@ Decline
 
 <script>
 
+/* ---------- MAP ---------- */
+
+let map
+let marker
+
+function initMap(lat,lng){
+
+map=L.map('map').setView([lat,lng],15)
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+attribution:'© OpenStreetMap'
+}).addTo(map)
+
+marker=L.marker([lat,lng]).addTo(map)
+.bindPopup("🚨 Your Location")
+.openPopup()
+
+}
+
+function updateMap(lat,lng){
+
+if(marker){
+marker.setLatLng([lat,lng])
+map.setView([lat,lng])
+}
+
+}
+
+/* ---------- INITIAL LOCATION ---------- */
+
+navigator.geolocation.getCurrentPosition(function(position){
+
+const lat=position.coords.latitude
+const lng=position.coords.longitude
+
+initMap(lat,lng)
+
+})
+
+/* ---------- BACKEND LOCATION ---------- */
+
+async function sendLocationToBackend(lat,lng){
+
+await fetch("http://127.0.0.1:8000/api/v1/location/update",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+latitude:lat,
+longitude:lng
+})
+})
+
+}
+
 /* ---------- COUNTDOWN ---------- */
 
 function startCountdown(){
@@ -214,32 +269,46 @@ panicMode()
 
 }
 
-/* ---------- MAP ---------- */
+/* ---------- PANIC MODE ---------- */
 
-function loadMap(lat,lng){
+function panicMode(){
 
-const map=L.map('map').setView([lat,lng],15)
+console.log("PANIC MODE ACTIVATED")
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-attribution:'© OpenStreetMap'
-}).addTo(map)
+document.getElementById("panicScreen").style.display="block"
 
-L.marker([lat,lng]).addTo(map)
-.bindPopup("🚨 Your Location")
-.openPopup()
+triggerAlert()
+
+sendSMSLocation()
+
+sendWhatsAppLocation()
+
+startEvidenceCapture()
+
+startLiveTracking()
 
 }
 
-/* ---------- GET LOCATION ---------- */
+/* ---------- LIVE TRACKING ---------- */
+
+function startLiveTracking(){
+
+setInterval(()=>{
 
 navigator.geolocation.getCurrentPosition(function(position){
 
 const lat=position.coords.latitude
 const lng=position.coords.longitude
 
-loadMap(lat,lng)
+updateMap(lat,lng)
+
+sendLocationToBackend(lat,lng)
 
 })
+
+},5000)
+
+}
 
 /* ---------- SMS ---------- */
 
@@ -259,27 +328,6 @@ const message=encodeURIComponent(
 window.open(`sms:?body=${message}`)
 
 })
-
-}
-
-/* ---------- LIVE TRACKING ---------- */
-
-function startLiveTracking(){
-
-setInterval(()=>{
-
-navigator.geolocation.getCurrentPosition(function(position){
-
-const lat = position.coords.latitude
-const lng = position.coords.longitude
-
-console.log("Updated location:",lat,lng)
-
-loadMap(lat,lng)
-
-})
-
-},10000)
 
 }
 
@@ -312,7 +360,7 @@ contacts.forEach((phone,index)=>{
 
 setTimeout(()=>{
 window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${message}`,"_blank")
-}, index*3000)
+},index*3000)
 
 })
 
@@ -329,7 +377,7 @@ const alertBox=document.getElementById("alertBox")
 alertBox.style.display="block"
 alertBox.innerHTML="Sending alert..."
 
-const response=await fetch("http://localhost:8000/api/v1/alert",{
+const response=await fetch("http://127.0.0.1:8000/api/v1/alert",{
 method:"POST",
 headers:{
 "Content-Type":"application/json"
@@ -337,7 +385,7 @@ headers:{
 body:JSON.stringify({
 latitude:12.9716,
 longitude:77.5946,
-location_name:"User Location"
+location:"User Location"
 })
 })
 
@@ -374,30 +422,74 @@ location.reload()
 
 }
 
-/* ---------- PANIC MODE ---------- */
+/* ---------- CANCEL PANIC ---------- */
 
-function panicMode(){
-
-console.log("PANIC MODE ACTIVATED")
-
-document.getElementById("panicScreen").style.display="block"
-
-triggerAlert()
-
-sendSMSLocation()
-
-sendWhatsAppLocation()
-
-}
 function cancelPanic(){
 
 document.getElementById("panicScreen").style.display="none"
 
 document.getElementById("alertBox").style.display="block"
-
 document.getElementById("alertBox").innerHTML="Alert cancelled."
 
 }
+
+/* ---------- EVIDENCE CAPTURE ---------- */
+
+async function startEvidenceCapture(){
+
+console.log("Evidence capture starting")
+
+try{
+
+const stream = await navigator.mediaDevices.getUserMedia({
+video:true,
+audio:true
+})
+
+console.log("Camera permission granted")
+
+const video=document.createElement("video")
+video.srcObject=stream
+video.play()
+
+setTimeout(()=>{
+
+const canvas=document.createElement("canvas")
+canvas.width=video.videoWidth
+canvas.height=video.videoHeight
+
+const ctx=canvas.getContext("2d")
+ctx.drawImage(video,0,0)
+
+const image=canvas.toDataURL("image/png")
+
+console.log("Evidence captured")
+
+saveEvidence(image)
+
+},3000)
+
+}catch(err){
+
+console.log("Camera/Mic access denied",err)
+
+}
+
+}
+
+function saveEvidence(image){
+
+const evidence={
+image:image,
+timestamp:new Date().toISOString()
+}
+
+localStorage.setItem("resqnine_evidence",JSON.stringify(evidence))
+
+console.log("Evidence stored locally")
+
+}
+
 /* ---------- VOICE TRIGGER ---------- */
 
 const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition
@@ -437,8 +529,8 @@ recognition.start()
 /* ---------- SERVICE WORKER ---------- */
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js")
-  .then(() => console.log("Service Worker Registered"));
+navigator.serviceWorker.register("sw.js")
+.then(()=>console.log("Service Worker Registered"))
 }
 
 </script>
